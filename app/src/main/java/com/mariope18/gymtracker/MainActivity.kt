@@ -20,10 +20,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             GymTrackerTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                    LoginScreen(modifier = Modifier.padding(innerPadding))
                 }
             }
         }
