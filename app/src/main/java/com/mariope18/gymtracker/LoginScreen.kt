@@ -1,5 +1,6 @@
 package com.mariope18.gymtracker
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,12 +14,14 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
+import com.google.firebase.firestore.firestore
 
 @Composable
 fun LoginScreen(modifier: Modifier = Modifier) {
 
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var isLoginMode by remember { mutableStateOf(true) }
 
     Column(
         modifier = modifier.fillMaxSize(),
@@ -27,7 +30,7 @@ fun LoginScreen(modifier: Modifier = Modifier) {
     )
     {
         Text(
-            text = "Login",
+            text = if (isLoginMode) "Login" else "Registrazione",
             style = MaterialTheme.typography.headlineLarge
         )
         OutlinedTextField(
@@ -49,21 +52,90 @@ fun LoginScreen(modifier: Modifier = Modifier) {
         val context =
             LocalContext.current; // Serve per mostrare il Toast (il messaggino a comparsa)
         val auth = Firebase.auth; // L'istanza di Firebase!
+        val db = Firebase.firestore; // L'istanza di Firebase!
 
         Button(onClick = {
-            // Diciamo a Firebase di creare un utente con l'email e password inserite!
-            auth.createUserWithEmailAndPassword(username, password)
-                .addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        //Successo!
-                        Toast.makeText(context, "Login effettuato", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(context, "Errore: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
+            if (username.isBlank() || password.isBlank()) {
+                Toast.makeText(context, "Inserisci email e password", Toast.LENGTH_SHORT).show()
+                return@Button
+            }
+
+            if (password.length < 6) {
+                Toast.makeText(
+                    context,
+                    "La password deve essere di almeno 6 caratteri",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@Button
+            }
+
+            if (isLoginMode) {
+                auth.signInWithEmailAndPassword(username, password)
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            Toast.makeText(
+                                context,
+                                "Login avvenuto con successo!",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } else {
+                            Log.e("GymTrackerAuth", "Errore Login", task.exception)
+                            Toast.makeText(
+                                context,
+                                "Errore Login: ${task.exception?.message}",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     }
-                }
+
+            } else {
+                // Fase 1: Creazione account su Firebase Auth
+                auth.createUserWithEmailAndPassword(username, password)
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            // L'utente è stato creato! Prendiamo il suo ID segreto (UID)
+                            val userId = task.result?.user?.uid
+                            if (userId != null) {
+                                // Fase 2: Prepariamo la scatola di dati per il Database NoSQL (Chiave -> Valore)
+                                val profiloUtente = hashMapOf(
+                                    "email" to username,
+                                    "dataRegistrazione" to System.currentTimeMillis()
+                                )
+                                db.collection("users").document(userId)
+                                    .set(profiloUtente)
+                                    .addOnSuccessListener {
+                                        Toast.makeText(
+                                            context,
+                                            "Registrazione avvenuta con successo!",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                    .addOnFailureListener { e ->
+                                        Log.e("GymTrackerAuth", "Errore salvataggio DB", e)
+                                        Toast.makeText(
+                                            context,
+                                            "Errore salvataggio DB: ${e.message}",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                            }
+                        } else {
+                            Log.e("GymTrackerAuth", "Errore Registrazione", task.exception)
+                            Toast.makeText(
+                                context,
+                                "Errore Registrazione: ${task.exception?.message}",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+            }
         }
         ) {
-            Text("Registrati / Login")
+            Text(text = if (isLoginMode) "Login" else "Registrazione")
+        }
+
+        TextButton(onClick = { isLoginMode = !isLoginMode }) {
+            Text(text = if (isLoginMode) "Non hai un account? Registrati" else "Hai già un account? Accedi")
         }
     }
 }
