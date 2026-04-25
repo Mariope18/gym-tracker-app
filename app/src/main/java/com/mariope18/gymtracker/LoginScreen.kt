@@ -17,11 +17,15 @@ import com.google.firebase.auth.auth
 import com.google.firebase.firestore.firestore
 
 @Composable
-fun LoginScreen(modifier: Modifier = Modifier) {
+fun LoginScreen(modifier: Modifier = Modifier, onLoginSuccess: () -> Unit = {}) {
 
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLoginMode by remember { mutableStateOf(true) }
+    val context =
+        LocalContext.current // Serve per mostrare il Toast (il messaggino a comparsa)
+    val auth = Firebase.auth // L'istanza di Firebase!
+    val db = Firebase.firestore // L'istanza di Firebase!
 
     Column(
         modifier = modifier.fillMaxSize(),
@@ -49,11 +53,6 @@ fun LoginScreen(modifier: Modifier = Modifier) {
             visualTransformation = PasswordVisualTransformation()
         )
 
-        val context =
-            LocalContext.current; // Serve per mostrare il Toast (il messaggino a comparsa)
-        val auth = Firebase.auth; // L'istanza di Firebase!
-        val db = Firebase.firestore; // L'istanza di Firebase!
-
         Button(onClick = {
             if (username.isBlank() || password.isBlank()) {
                 Toast.makeText(context, "Inserisci email e password", Toast.LENGTH_SHORT).show()
@@ -78,6 +77,7 @@ fun LoginScreen(modifier: Modifier = Modifier) {
                                 "Login avvenuto con successo!",
                                 Toast.LENGTH_SHORT
                             ).show()
+                            onLoginSuccess()
                         } else {
                             Log.e("GymTrackerAuth", "Errore Login", task.exception)
                             Toast.makeText(
@@ -109,6 +109,7 @@ fun LoginScreen(modifier: Modifier = Modifier) {
                                             "Registrazione avvenuta con successo!",
                                             Toast.LENGTH_SHORT
                                         ).show()
+                                        onLoginSuccess()
                                     }
                                     .addOnFailureListener { e ->
                                         Log.e("GymTrackerAuth", "Errore salvataggio DB", e)
