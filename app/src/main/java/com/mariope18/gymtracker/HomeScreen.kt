@@ -5,10 +5,19 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -33,6 +42,9 @@ fun HomeScreen(modifier: Modifier = Modifier, onLogoutSuccess: () -> Unit = {}) 
     var userData by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(true) }
 
+    var showDialog by remember { mutableStateOf(false) }
+    var newWorkoutName by remember { mutableStateOf("") }
+
     LaunchedEffect(Unit) {
         val currentUser = auth.currentUser
 
@@ -54,29 +66,96 @@ fun HomeScreen(modifier: Modifier = Modifier, onLogoutSuccess: () -> Unit = {}) 
         }
     }
 
-    Column(
+    Scaffold(
         modifier = modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        if (isLoading) {
-            CircularProgressIndicator();
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showDialog = true }
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = "Aggiungi")
+            }
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator()
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Recupero dati in corso...")
+            } else {
+                Text(
+                    text = "Benvenuto, ${userData ?: "Utente Sconosciuto"}!",
+                    style = MaterialTheme.typography.headlineMedium
+                )
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
-            Text("Recupero dati in corso...")
-        } else {
-            Text(
-               text =  "Benvenuto, ${userData ?: "Utente Sconosciuto"}!",
-                style = MaterialTheme.typography.headlineMedium
-            )
+
+            Button(onClick = {
+                auth.signOut()
+                onLogoutSuccess()
+            }) {
+                Text("Logout")
+            }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(onClick = {
-            auth.signOut()
-            onLogoutSuccess()
-        }) {
-            Text("Logout")
+        if (showDialog) {
+            AlertDialog(
+                onDismissRequest = {
+                    showDialog = false
+                },
+                title = {
+                    Text("Nuovo Allenamento")
+                },
+                text = {
+                    Column {
+                        Text("Inserisci il nome della nuova scheda:")
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TextField(
+                            value = newWorkoutName,
+                            onValueChange = { newWorkoutName = it },
+                            label = { Text("Nome") }
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        if (newWorkoutName.isNotBlank()) {
+                            val currentUser = auth.currentUser
+                            if (currentUser != null) {
+                                val uid = currentUser.uid
+                                val workoutData = hashMapOf(
+                                    "name" to newWorkoutName,
+                                    "createdAt" to System.currentTimeMillis()
+                                )
+                                db.collection("users").document(uid)
+                                    .collection("workouts")
+                                    .add(workoutData)
+                                    .addOnSuccessListener {
+                                        showDialog = false
+                                        newWorkoutName = ""
+                                    }
+                                    .addOnFailureListener { exception ->
+                                        showDialog = false
+                                        newWorkoutName = ""
+                                    }
+                            }
+                        }
+                    }) {
+                        Text("Conferma")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDialog = false }) {
+                        Text("Annulla")
+                    }
+                }
+            )
         }
     }
 }
