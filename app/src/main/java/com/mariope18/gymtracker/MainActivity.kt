@@ -29,10 +29,31 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                         composable("Home") {
-                            HomeScreen(modifier = Modifier.padding(innerPadding))
-                            {
-                                navController.navigate("Login")
-                            }
+                            HomeScreen(
+                                modifier = Modifier.padding(innerPadding),
+                                onLogoutSuccess =
+                                    {
+                                        navController.navigate("Login") {
+                                            popUpTo("Home") { inclusive = true }
+                                        }
+                                    },
+                                onWorkoutClick =
+                                    {
+                                        workoutId, workoutName ->
+                                        navController.navigate("WorkoutDetail/$workoutId/$workoutName")
+                                    }
+                            )
+                        }
+                        composable("WorkoutDetail/{workoutId}/{workoutName}") { backStackEntry ->
+                            val workoutId = backStackEntry.arguments?.getString("workoutId") ?: ""
+                            val workoutName = backStackEntry.arguments?.getString("workoutName") ?: ""
+                            WorkoutDetailScreen(
+                                workoutId = workoutId,
+                                workoutName = workoutName,
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                }
+                            )
                         }
                     }
                 }
