@@ -4,12 +4,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -45,6 +49,8 @@ fun HomeScreen(modifier: Modifier = Modifier, onLogoutSuccess: () -> Unit = {}) 
     var showDialog by remember { mutableStateOf(false) }
     var newWorkoutName by remember { mutableStateOf("") }
 
+    var workoutsList by remember { mutableStateOf(emptyList<Workout>()) }
+
     LaunchedEffect(Unit) {
         val currentUser = auth.currentUser
 
@@ -55,6 +61,16 @@ fun HomeScreen(modifier: Modifier = Modifier, onLogoutSuccess: () -> Unit = {}) 
                 .addOnSuccessListener { document ->
                     if (document != null && document.exists()) {
                         userData = document.getString("email")
+
+                        db.collection("users").document(uid)
+                            .collection("workouts")
+                            .addSnapshotListener { snapshot, error ->
+                                if ( error == null && snapshot != null) {
+                                    workoutsList = snapshot.documents.map { doc ->
+                                        Workout(doc.id, doc.getString("name") ?: "")
+                                    }
+                                }
+                            }
                     }
                     isLoading = false
                 }
@@ -92,6 +108,21 @@ fun HomeScreen(modifier: Modifier = Modifier, onLogoutSuccess: () -> Unit = {}) 
                     text = "Benvenuto, ${userData ?: "Utente Sconosciuto"}!",
                     style = MaterialTheme.typography.headlineMedium
                 )
+            }
+
+            LazyColumn( modifier = Modifier.weight(1f)) {
+                items(workoutsList) { workout ->
+                    Card(
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .fillMaxWidth()
+                    ) {
+                        Text(
+                            text = workout.name,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -159,6 +190,8 @@ fun HomeScreen(modifier: Modifier = Modifier, onLogoutSuccess: () -> Unit = {}) 
         }
     }
 }
+
+data class Workout(val id: String, val name: String)
 
 @Preview(showBackground = true)
 @Composable
