@@ -41,16 +41,39 @@ class MainActivity : ComponentActivity() {
                                     {
                                         workoutId, workoutName ->
                                         navController.navigate("WorkoutDetail/$workoutId/$workoutName")
+                                    },
+                                onCatalogClick =
+                                    {
+                                        navController.navigate("ExerciseCatalog")
                                     }
                             )
                         }
                         composable("WorkoutDetail/{workoutId}/{workoutName}") { backStackEntry ->
                             val workoutId = backStackEntry.arguments?.getString("workoutId") ?: ""
                             val workoutName = backStackEntry.arguments?.getString("workoutName") ?: ""
+                            val exerciseFromCatalog = backStackEntry.savedStateHandle.get<String>("esercizio_scelto") ?: ""
                             WorkoutDetailScreen(
                                 workoutId = workoutId,
                                 workoutName = workoutName,
+                                selectedExerciseName = exerciseFromCatalog,
                                 onNavigateBack = {
+                                    navController.popBackStack()
+                                },
+                                onOpenCatalog = {
+                                    navController.navigate("ExerciseCatalog")
+                                },
+                                onExerciseConsumed = {
+                                    backStackEntry.savedStateHandle.remove<String>("esercizio_scelto")
+                                }
+                            )
+                        }
+                        composable("ExerciseCatalog") {
+                            ExerciseCatalogScreen(
+                                onNavigateBack = { navController.popBackStack() },
+                                onExerciseClick = { exerciseName ->
+                                    navController.previousBackStackEntry
+                                        ?.savedStateHandle
+                                        ?.set("esercizio_scelto", exerciseName)
                                     navController.popBackStack()
                                 }
                             )

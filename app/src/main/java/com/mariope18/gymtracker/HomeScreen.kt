@@ -40,7 +40,8 @@ import com.google.firebase.firestore.firestore
 fun HomeScreen(
     modifier: Modifier = Modifier,
     onLogoutSuccess: () -> Unit = {},
-    onWorkoutClick: (String, String) -> Unit = {_, _ ->}
+    onWorkoutClick: (String, String) -> Unit = {_, _ ->},
+    onCatalogClick: () -> Unit
     ) {
 
     val auth = remember { Firebase.auth }
@@ -130,6 +131,12 @@ fun HomeScreen(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+
+            Button(onClick = { onCatalogClick() }) {
+                Text("Vai al Catalogo")
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             Button(onClick = {
                 auth.signOut()

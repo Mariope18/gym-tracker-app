@@ -32,7 +32,12 @@ import com.google.firebase.auth.auth
 import com.google.firebase.firestore.firestore
 
 @Composable
-fun WorkoutDetailScreen(workoutId: String, workoutName: String, onNavigateBack: () -> Unit) {
+fun WorkoutDetailScreen(
+    workoutId: String, workoutName: String,
+    selectedExerciseName: String = "",
+    onNavigateBack: () -> Unit,
+    onOpenCatalog: () -> Unit,
+    onExerciseConsumed: () -> Unit) {
 
     val auth = remember { Firebase.auth }
     val db = remember { Firebase.firestore }
@@ -41,6 +46,14 @@ fun WorkoutDetailScreen(workoutId: String, workoutName: String, onNavigateBack: 
     var exerciseName by remember { mutableStateOf("") }
     var sets by remember { mutableStateOf("") } // Serie
     var reps by remember { mutableStateOf("") } // Ripetizioni
+
+    LaunchedEffect(selectedExerciseName) {
+        if (selectedExerciseName.isNotEmpty()) {
+            exerciseName = selectedExerciseName
+            showDialog = true
+            onExerciseConsumed()
+        }
+    }
 
     val exerciseList = remember { mutableStateListOf<Exercise>() }
 
@@ -77,14 +90,25 @@ fun WorkoutDetailScreen(workoutId: String, workoutName: String, onNavigateBack: 
     ) { innerPadding ->
         if (showDialog) {
             AlertDialog(
-                onDismissRequest = { showDialog = false },
+                onDismissRequest = {
+                    exerciseName = ""
+                    sets = ""
+                    reps = ""
+                    showDialog = false
+                },
                 title = { Text(text = "Aggiungi esercizio") },
                 text = {
                     Column() {
                         OutlinedTextField(
                             value = exerciseName,
                             onValueChange = { exerciseName = it },
-                            label = { Text("Nome esercizio") })
+                            label = { Text("Nome esercizio") },
+                            trailingIcon = {
+                                Button(onClick = {
+                                    showDialog = false
+                                    onOpenCatalog()
+                                }) { Text("Cerca") }
+                            })
                         OutlinedTextField(
                             value = sets,
                             onValueChange = { sets = it },
@@ -123,7 +147,12 @@ fun WorkoutDetailScreen(workoutId: String, workoutName: String, onNavigateBack: 
                     }
                 },
                 dismissButton = {
-                    Button(onClick = { showDialog = false }) {
+                    Button(onClick = {
+                        exerciseName = ""
+                        sets = ""
+                        reps = ""
+                        showDialog = false
+                    }) {
                         Text("Annulla")
                     }
                 }
