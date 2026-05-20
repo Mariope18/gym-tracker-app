@@ -5,8 +5,16 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -19,7 +27,7 @@ import com.google.firebase.firestore.firestore
 @Composable
 fun LoginScreen(modifier: Modifier = Modifier, onLoginSuccess: () -> Unit = {}) {
 
-    var username by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLoginMode by remember { mutableStateOf(true) }
     val context =
@@ -38,11 +46,11 @@ fun LoginScreen(modifier: Modifier = Modifier, onLoginSuccess: () -> Unit = {}) 
             style = MaterialTheme.typography.headlineLarge
         )
         OutlinedTextField(
-            value = username,
+            value = email,
             onValueChange = {
-                username = it
+                email = it
             },
-            label = { Text("Username") }
+            label = { Text("Email") }
         )
         OutlinedTextField(
             value = password,
@@ -54,7 +62,7 @@ fun LoginScreen(modifier: Modifier = Modifier, onLoginSuccess: () -> Unit = {}) 
         )
 
         Button(onClick = {
-            if (username.isBlank() || password.isBlank()) {
+            if (email.isBlank() || password.isBlank()) {
                 Toast.makeText(context, "Inserisci email e password", Toast.LENGTH_SHORT).show()
                 return@Button
             }
@@ -69,7 +77,7 @@ fun LoginScreen(modifier: Modifier = Modifier, onLoginSuccess: () -> Unit = {}) 
             }
 
             if (isLoginMode) {
-                auth.signInWithEmailAndPassword(username, password)
+                auth.signInWithEmailAndPassword(email.trim(), password.trim())
                     .addOnCompleteListener { task ->
                         if (task.isSuccessful) {
                             Toast.makeText(
@@ -90,7 +98,7 @@ fun LoginScreen(modifier: Modifier = Modifier, onLoginSuccess: () -> Unit = {}) 
 
             } else {
                 // Fase 1: Creazione account su Firebase Auth
-                auth.createUserWithEmailAndPassword(username, password)
+                auth.createUserWithEmailAndPassword(email.trim(), password.trim())
                     .addOnCompleteListener { task ->
                         if (task.isSuccessful) {
                             // L'utente è stato creato! Prendiamo il suo ID segreto (UID)
@@ -98,7 +106,7 @@ fun LoginScreen(modifier: Modifier = Modifier, onLoginSuccess: () -> Unit = {}) 
                             if (userId != null) {
                                 // Fase 2: Prepariamo la scatola di dati per il Database NoSQL (Chiave -> Valore)
                                 val profiloUtente = hashMapOf(
-                                    "email" to username,
+                                    "email" to email.trim(),
                                     "dataRegistrazione" to System.currentTimeMillis()
                                 )
                                 db.collection("users").document(userId)

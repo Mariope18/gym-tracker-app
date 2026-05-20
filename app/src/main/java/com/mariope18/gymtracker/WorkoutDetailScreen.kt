@@ -17,10 +17,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +49,7 @@ fun WorkoutDetailScreen(
     var exerciseName by remember { mutableStateOf("") }
     var sets by remember { mutableStateOf("") } // Serie
     var reps by remember { mutableStateOf("") } // Ripetizioni
+    var dayNumber by remember { mutableStateOf("1") } // Giorno
 
     LaunchedEffect(selectedExerciseName) {
         if (selectedExerciseName.isNotEmpty()) {
@@ -71,7 +75,8 @@ fun WorkoutDetailScreen(
                                 doc.id,
                                 doc.getString("name") ?: "",
                                 (doc.getLong("sets") ?: 0).toInt(),
-                                (doc.getLong("reps") ?: 0).toInt()
+                                (doc.getLong("reps") ?: 0).toInt(),
+                                (doc.getLong("dayNumber") ?: 1L).toInt()
                             )
                         )
                     }
@@ -117,14 +122,19 @@ fun WorkoutDetailScreen(
                             value = reps,
                             onValueChange = { reps = it },
                             label = { Text("Ripetizioni") })
+                        OutlinedTextField(
+                            value = dayNumber,
+                            onValueChange = { dayNumber = it },
+                            label = { Text("Giorno") })
                     }
                 },
                 confirmButton = {
                     Button(onClick = {
                         val exercise = hashMapOf(
                             "name" to exerciseName,
-                            "sets" to sets.toIntOrNull(),
-                            "reps" to reps.toIntOrNull()
+                            "sets" to (sets.toIntOrNull() ?: 0),
+                            "reps" to (reps.toIntOrNull() ?: 0),
+                            "dayNumber" to (dayNumber.toIntOrNull() ?: 1)
                         )
                         val userId = auth.currentUser?.uid
                         if (userId != null) {
@@ -136,6 +146,7 @@ fun WorkoutDetailScreen(
                                     exerciseName = ""
                                     sets = ""
                                     reps = ""
+                                    dayNumber = "1"
                                     showDialog = false
                                 }
                                 .addOnFailureListener {
@@ -165,10 +176,35 @@ fun WorkoutDetailScreen(
         ) {
             Text(text = workoutName)
 
-            LazyColumn(modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()) {
-                items(exerciseList) { exercise ->
+            val groupedExercises = exerciseList.groupBy { it.dayNumber }
+            val availableDays = groupedExercises.keys.sorted()
+
+            var selectedDay by remember { mutableIntStateOf(1) }
+
+            val selectedTabIndex = availableDays.indexOf(selectedDay)
+            if (availableDays.isNotEmpty() && selectedTabIndex != -1) {
+                ScrollableTabRow(selectedTabIndex) {
+                    availableDays.forEach { day ->
+                        Tab(
+                            selected = (selectedDay == day),
+                            onClick = { selectedDay = day }
+                        ) {
+                            Text(
+                                text = "Giorno $day",
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                val exercisesToShow = groupedExercises[selectedDay] ?: emptyList()
+                items(exercisesToShow) { exercise ->
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -200,5 +236,6 @@ data class Exercise(
     val id: String,
     val name: String,
     val sets: Int,
-    val reps: Int
+    val reps: Int,
+    val dayNumber: Int
 )

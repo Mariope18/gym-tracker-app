@@ -103,15 +103,14 @@ fun HomeScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Text(
+                text = "Schede",
+                style = MaterialTheme.typography.headlineMedium
+            )
             if (isLoading) {
                 CircularProgressIndicator()
                 Spacer(modifier = Modifier.height(16.dp))
                 Text("Recupero dati in corso...")
-            } else {
-                Text(
-                    text = "Benvenuto, ${userData ?: "Utente Sconosciuto"}!",
-                    style = MaterialTheme.typography.headlineMedium
-                )
             }
 
             LazyColumn( modifier = Modifier.weight(1f)) {
