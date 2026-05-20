@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -55,6 +56,7 @@ fun WorkoutDetailScreen(
     var sets by remember { mutableStateOf("") } // Serie
     var reps by remember { mutableStateOf("") } // Ripetizioni
     var dayNumber by remember { mutableStateOf("1") } // Giorno
+    var editingExerciseId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(selectedExerciseName) {
         if (selectedExerciseName.isNotEmpty()) {
@@ -92,7 +94,14 @@ fun WorkoutDetailScreen(
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showDialog = true }
+                onClick = {
+                    exerciseName = ""
+                    sets = ""
+                    reps = ""
+                    dayNumber = "1"
+                    editingExerciseId = null
+                    showDialog = true
+                }
             ) {
                 Icon(imageVector = Icons.Default.Add, contentDescription = "Aggiungi esercizio")
             }
@@ -101,20 +110,20 @@ fun WorkoutDetailScreen(
         if (showDialog) {
             AlertDialog(
                 onDismissRequest = {
-                    exerciseName = ""
-                    sets = ""
-                    reps = ""
                     showDialog = false
                 },
-                title = { Text(text = "Aggiungi esercizio") },
+                title = { Text(text = if (editingExerciseId == null) "Aggiungi esercizio" else "Modifica esercizio") },
                 text = {
                     Column() {
                         OutlinedTextField(
                             value = exerciseName,
                             onValueChange = { exerciseName = it },
+                            enabled = editingExerciseId == null,
                             label = { Text("Nome esercizio") },
                             trailingIcon = {
-                                Button(onClick = {
+                                Button(
+                                    enabled = editingExerciseId == null,
+                                    onClick = {
                                     showDialog = false
                                     onOpenCatalog()
                                 }) { Text("Cerca") }
@@ -143,20 +152,25 @@ fun WorkoutDetailScreen(
                         )
                         val userId = auth.currentUser?.uid
                         if (userId != null) {
-                            db.collection("users").document(userId)
-                                .collection("workouts").document(workoutId)
-                                .collection("exercises")
-                                .add(exercise)
-                                .addOnSuccessListener {
-                                    exerciseName = ""
-                                    sets = ""
-                                    reps = ""
-                                    dayNumber = "1"
-                                    showDialog = false
-                                }
-                                .addOnFailureListener {
-                                    showDialog = false
-                                }
+                            if (editingExerciseId == null) {
+                                db.collection("users").document(userId)
+                                    .collection("workouts").document(workoutId)
+                                    .collection("exercises")
+                                    .add(exercise)
+                                    .addOnSuccessListener {
+                                        showDialog = false
+                                    }
+                                    .addOnFailureListener { showDialog = false }
+                            } else {
+                                db.collection("users").document(userId)
+                                    .collection("workouts").document(workoutId)
+                                    .collection("exercises").document(editingExerciseId!!)
+                                    .update(exercise as Map<String, Any>)
+                                    .addOnSuccessListener {
+                                        showDialog = false
+                                    }
+                                    .addOnFailureListener { showDialog = false }
+                            }
                         }
                     }) {
                         Text("Salva")
@@ -164,9 +178,6 @@ fun WorkoutDetailScreen(
                 },
                 dismissButton = {
                     Button(onClick = {
-                        exerciseName = ""
-                        sets = ""
-                        reps = ""
                         showDialog = false
                     }) {
                         Text("Annulla")
@@ -240,6 +251,22 @@ fun WorkoutDetailScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
+                            IconButton(
+                                onClick = {
+                                    editingExerciseId = exercise.id
+                                    exerciseName = exercise.name
+                                    sets = exercise.sets.toString()
+                                    reps = exercise.reps.toString()
+                                    dayNumber = exercise.dayNumber.toString()
+                                    showDialog = true
+                                },
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Modifica"
+                                )
+                            }
+
                             IconButton(
                                 onClick = {
                                     val userId = auth.currentUser?.uid
