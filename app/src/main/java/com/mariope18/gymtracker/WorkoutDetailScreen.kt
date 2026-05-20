@@ -1,6 +1,8 @@
 package com.mariope18.gymtracker
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -8,12 +10,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -28,6 +32,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.google.firebase.Firebase
@@ -181,6 +186,14 @@ fun WorkoutDetailScreen(
 
             var selectedDay by remember { mutableIntStateOf(1) }
 
+            LaunchedEffect(availableDays) {
+                if (availableDays.isNotEmpty() && !availableDays.contains(selectedDay)) {
+                    // Se il giorno selezionato non esiste più (perché abbiamo cancellato l'ultimo esercizio),
+                    // sposta automaticamente l'utente sul primo giorno disponibile!
+                    selectedDay = availableDays.first()
+                }
+            }
+
             val selectedTabIndex = availableDays.indexOf(selectedDay)
             if (availableDays.isNotEmpty() && selectedTabIndex != -1) {
                 ScrollableTabRow(selectedTabIndex) {
@@ -211,16 +224,38 @@ fun WorkoutDetailScreen(
                             .padding(8.dp),
                         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                     ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = exercise.name,
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Text(
-                                text = "${exercise.sets} serie x ${exercise.reps} rip",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        Row (
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            Column {
+                                Text(
+                                    text = exercise.name,
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text(
+                                    text = "${exercise.sets} serie x ${exercise.reps} rip",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            IconButton(
+                                onClick = {
+                                    val userId = auth.currentUser?.uid
+                                    if (userId != null) {
+                                        db.collection("users").document(userId)
+                                            .collection("workouts").document(workoutId)
+                                            .collection("exercises").document(exercise.id)
+                                            .delete()
+                                    }
+                                },
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Elimina"
+                                )
+                            }
                         }
                     }
                 }
