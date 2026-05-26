@@ -3,6 +3,7 @@ package com.mariope18.gymtracker
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,12 +13,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -55,6 +59,8 @@ fun HomeScreen(
 
     var workoutsList by remember { mutableStateOf(emptyList<Workout>()) }
 
+    var editingWorkoutId by remember { mutableStateOf<String?>(null) }
+
     LaunchedEffect(Unit) {
         val currentUser = auth.currentUser
 
@@ -90,7 +96,11 @@ fun HomeScreen(
         modifier = modifier.fillMaxSize(),
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showDialog = true }
+                onClick = {
+                    showDialog = true
+                    editingWorkoutId = null
+                    newWorkoutName = ""
+                }
             ) {
                 Icon(Icons.Filled.Add, contentDescription = "Aggiungi")
             }
@@ -121,10 +131,45 @@ fun HomeScreen(
                             .fillMaxWidth()
                             .clickable { onWorkoutClick(workout.id, workout.name) }
                     ) {
-                        Text(
-                            text = workout.name,
-                            modifier = Modifier.padding(16.dp)
-                        )
+                        Row (
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp), // Prende tutta la larghezza
+                            horizontalArrangement = Arrangement.SpaceBetween, // Mette lo spazio in mezzo
+                            verticalAlignment = Alignment.CenterVertically // Centra tutto in altezza
+                        ){
+                            Text(
+                                text = workout.name,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                            Row {
+                                IconButton(onClick = {
+                                    editingWorkoutId = workout.id
+                                    newWorkoutName = workout.name
+                                    showDialog = true
+                                }) {
+                                    Icon(Icons.Default.Edit, contentDescription = "Modifica")
+                                }
+
+                                IconButton(onClick = {
+                                    val currentUser = auth.currentUser
+                                    if (currentUser != null) {
+                                        val workoutref =
+                                            db.collection("users").document(currentUser.uid)
+                                                .collection("workouts").document(workout.id)
+
+                                        workoutref.collection("exercises").get()
+                                            .addOnSuccessListener { snapshots ->
+                                                for (document in snapshots.documents) {
+                                                    document.reference.delete()
+                                                }
+                                                workoutref
+                                                    .delete()
+                                            }
+                                    }
+                                }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Elimina")
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -151,7 +196,7 @@ fun HomeScreen(
                     showDialog = false
                 },
                 title = {
-                    Text("Nuovo Allenamento")
+                    Text(if (editingWorkoutId == null) "Nuovo Allenamento" else "Modifica Allenamento")
                 },
                 text = {
                     Column {
@@ -170,21 +215,26 @@ fun HomeScreen(
                             val currentUser = auth.currentUser
                             if (currentUser != null) {
                                 val uid = currentUser.uid
-                                val workoutData = hashMapOf(
-                                    "name" to newWorkoutName,
-                                    "createdAt" to System.currentTimeMillis()
-                                )
-                                db.collection("users").document(uid)
-                                    .collection("workouts")
-                                    .add(workoutData)
-                                    .addOnSuccessListener {
-                                        showDialog = false
-                                        newWorkoutName = ""
-                                    }
-                                    .addOnFailureListener { exception ->
-                                        showDialog = false
-                                        newWorkoutName = ""
-                                    }
+
+                                if (editingWorkoutId == null) {
+                                    val workoutData = hashMapOf(
+                                        "name" to newWorkoutName,
+                                        "createdAt" to System.currentTimeMillis()
+                                    )
+                                    db.collection("users").document(uid)
+                                        .collection("workouts")
+                                        .add(workoutData)
+                                } else {
+                                    db.collection("users").document(uid)
+                                        .collection("workouts").document(editingWorkoutId!!)
+                                        .update("name", newWorkoutName)
+                                }
+                                .addOnSuccessListener {
+                                    showDialog = false
+                                }
+                                .addOnFailureListener {
+                                    showDialog = false
+                                }
                             }
                         }
                     }) {
