@@ -243,7 +243,9 @@ fun WorkoutDetailScreen(
                         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                     ) {
                         Row (
-                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ){
@@ -258,37 +260,39 @@ fun WorkoutDetailScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            IconButton(
-                                onClick = {
-                                    editingExerciseId = exercise.id
-                                    exerciseName = exercise.name
-                                    sets = exercise.sets.toString()
-                                    reps = exercise.reps.toString()
-                                    dayNumber = exercise.dayNumber.toString()
-                                    showDialog = true
-                                },
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Edit,
-                                    contentDescription = "Modifica"
-                                )
-                            }
+                            Row {
+                                IconButton(
+                                    onClick = {
+                                        editingExerciseId = exercise.id
+                                        exerciseName = exercise.name
+                                        sets = exercise.sets.toString()
+                                        reps = exercise.reps.toString()
+                                        dayNumber = exercise.dayNumber.toString()
+                                        showDialog = true
+                                    },
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = "Modifica"
+                                    )
+                                }
 
-                            IconButton(
-                                onClick = {
-                                    val userId = auth.currentUser?.uid
-                                    if (userId != null) {
-                                        db.collection("users").document(userId)
-                                            .collection("workouts").document(workoutId)
-                                            .collection("exercises").document(exercise.id)
-                                            .delete()
-                                    }
-                                },
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Delete,
-                                    contentDescription = "Elimina"
-                                )
+                                IconButton(
+                                    onClick = {
+                                        val userId = auth.currentUser?.uid
+                                        if (userId != null) {
+                                            db.collection("users").document(userId)
+                                                .collection("workouts").document(workoutId)
+                                                .collection("exercises").document(exercise.id)
+                                                .delete()
+                                        }
+                                    },
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "Elimina"
+                                    )
+                                }
                             }
                         }
                     }
