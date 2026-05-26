@@ -68,14 +68,19 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         composable("ExerciseCatalog") {
+                            val previousRoute = navController.previousBackStackEntry?.destination?.route
+                            val isFromWorkoutDetail = previousRoute?.startsWith("WorkoutDetail") == true
+
                             ExerciseCatalogScreen(
                                 onNavigateBack = { navController.popBackStack() },
-                                onExerciseClick = { exerciseName ->
-                                    navController.previousBackStackEntry
-                                        ?.savedStateHandle
-                                        ?.set("esercizio_scelto", exerciseName)
-                                    navController.popBackStack()
-                                }
+                                onExerciseClick = if (isFromWorkoutDetail) {
+                                    { exerciseName ->
+                                        navController.previousBackStackEntry
+                                            ?.savedStateHandle
+                                            ?.set("esercizio_scelto", exerciseName)
+                                        navController.popBackStack()
+                                    }
+                                } else null
                             )
                         }
                     }

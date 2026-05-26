@@ -45,7 +45,7 @@ import com.google.firebase.firestore.firestore
 @Composable
 fun ExerciseCatalogScreen(
     onNavigateBack: () -> Unit,
-    onExerciseClick: (String) -> Unit
+    onExerciseClick: ((String) -> Unit)? = null
 ) {
 
     val db = Firebase.firestore
@@ -99,7 +99,13 @@ fun ExerciseCatalogScreen(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onExerciseClick(exercise.name) },
+                            .then(
+                                if (onExerciseClick != null) {
+                                    Modifier.clickable { onExerciseClick(exercise.name) }
+                                } else {
+                                    Modifier
+                                }
+                            ),
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(
