@@ -26,6 +26,7 @@ import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -68,10 +69,12 @@ fun WorkoutDetailScreen(
 
     val exerciseList = remember { mutableStateListOf<Exercise>() }
 
-    LaunchedEffect(workoutId) {
+    DisposableEffect(workoutId) {
         val userId = auth.currentUser?.uid
+        var registration: com.google.firebase.firestore.ListenerRegistration? = null
+        
         if (userId != null) {
-            db.collection("users").document(userId)
+            registration = db.collection("users").document(userId)
                 .collection("workouts").document(workoutId)
                 .collection("exercises")
                 .addSnapshotListener { snapshot, _ ->
@@ -88,6 +91,10 @@ fun WorkoutDetailScreen(
                         )
                     }
                 }
+        }
+        
+        onDispose {
+            registration?.remove()
         }
     }
 

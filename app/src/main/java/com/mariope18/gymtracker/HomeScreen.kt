@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,7 +52,6 @@ fun HomeScreen(
     val auth = remember { Firebase.auth }
     val db = remember { Firebase.firestore }
 
-    var userData by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(true) }
 
     var showDialog by remember { mutableStateOf(false) }
@@ -69,19 +69,6 @@ fun HomeScreen(
 
             db.collection("users").document(uid).get()
                 .addOnSuccessListener { document ->
-                    if (document != null && document.exists()) {
-                        userData = document.getString("email")
-
-                        db.collection("users").document(uid)
-                            .collection("workouts")
-                            .addSnapshotListener { snapshot, error ->
-                                if ( error == null && snapshot != null) {
-                                    workoutsList = snapshot.documents.map { doc ->
-                                        Workout(doc.id, doc.getString("name") ?: "")
-                                    }
-                                }
-                            }
-                    }
                     isLoading = false
                 }
                 .addOnFailureListener { exception ->
@@ -89,6 +76,29 @@ fun HomeScreen(
                 }
         } else {
             isLoading = false
+        }
+    }
+
+    DisposableEffect(Unit) {
+        val currentUser = auth.currentUser
+        var registration: com.google.firebase.firestore.ListenerRegistration? = null
+
+        if (currentUser != null) {
+            val uid = currentUser.uid
+
+            registration = db.collection("users").document(uid)
+                .collection("workouts")
+                .addSnapshotListener { snapshot, error ->
+                    if (error == null && snapshot != null) {
+                        workoutsList = snapshot.documents.map { doc ->
+                            Workout(doc.id, doc.getString("name") ?: "")
+                        }
+                    }
+                }
+        }
+
+        onDispose {
+            registration?.remove()
         }
     }
 
